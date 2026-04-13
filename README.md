@@ -1,4 +1,4 @@
-# Clicky SDK
+# Clicky-Web SDK
 
 An embeddable JavaScript SDK that adds step-by-step UI navigation guidance to any web app. Users press **Cmd+K** (or **Ctrl+K**), type what they want to do, and a blue cursor guides them through the interface — pointing at each element to click, waiting for them to click it, then showing the next step.
 
