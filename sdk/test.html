@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clicky SDK Test Page</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+    }
+    .navbar {
+      background: #1a1a2e;
+      color: white;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .navbar h1 { font-size: 18px; font-weight: 600; }
+    .navbar a { color: #8892b0; text-decoration: none; font-size: 14px; }
+    .navbar a:hover { color: white; }
+    .sidebar {
+      width: 240px;
+      background: white;
+      border-right: 1px solid #e0e0e0;
+      padding: 16px;
+      position: fixed;
+      top: 48px;
+      bottom: 0;
+      overflow-y: auto;
+    }
+    .sidebar h3 { font-size: 12px; text-transform: uppercase; color: #888; margin-bottom: 8px; }
+    .sidebar ul { list-style: none; }
+    .sidebar li { padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+    .sidebar li:hover { background: #f0f0f0; }
+    .sidebar li.active { background: #e8f0fe; color: #1a73e8; }
+    .main { margin-left: 240px; padding: 24px; margin-top: 48px; }
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 16px;
+      border: 1px solid #e0e0e0;
+    }
+    .card h2 { font-size: 18px; margin-bottom: 12px; }
+    .card p { color: #666; line-height: 1.6; }
+    .btn {
+      display: inline-block;
+      padding: 8px 16px;
+      background: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-top: 12px;
+    }
+    .btn:hover { background: #1557b0; }
+    .service-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .service-card {
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 16px;
+      cursor: pointer;
+    }
+    .service-card:hover { border-color: #1a73e8; }
+    .service-card h3 { font-size: 14px; margin-bottom: 4px; }
+    .service-card p { font-size: 12px; color: #888; }
+    .status-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .status-running { background: #e6f4ea; color: #1e8e3e; }
+    .status-stopped { background: #fce8e6; color: #d93025; }
+    .hint {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #1a1a2e;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      opacity: 0.9;
+    }
+    .hint kbd {
+      background: rgba(255,255,255,0.15);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <h1>Aiven Console (Demo)</h1>
+    <a href="#">Services</a>
+    <a href="#">Projects</a>
+    <a href="#">Billing</a>
+    <a href="#">Settings</a>
+  </nav>
+
+  <div class="sidebar">
+    <h3>Services</h3>
+    <ul>
+      <li class="active">All Services</li>
+      <li>PostgreSQL</li>
+      <li>Apache Kafka</li>
+      <li>Redis</li>
+      <li>OpenSearch</li>
+      <li>MySQL</li>
+    </ul>
+    <h3 style="margin-top: 24px;">Quick Actions</h3>
+    <ul>
+      <li>Create Service</li>
+      <li>View Logs</li>
+      <li>Manage Users</li>
+    </ul>
+  </div>
+
+  <div class="main">
+    <div class="card">
+      <h2>Your Services</h2>
+      <p>You have 3 active services in this project.</p>
+      <button class="btn">+ Create New Service</button>
+    </div>
+
+    <div class="service-grid">
+      <div class="service-card">
+        <h3>my-postgresql</h3>
+        <p>PostgreSQL 15 &bull; Business-4</p>
+        <span class="status-badge status-running">Running</span>
+      </div>
+      <div class="service-card">
+        <h3>my-kafka</h3>
+        <p>Apache Kafka 3.5 &bull; Business-8</p>
+        <span class="status-badge status-running">Running</span>
+      </div>
+      <div class="service-card">
+        <h3>dev-redis</h3>
+        <p>Redis 7.0 &bull; Hobbyist</p>
+        <span class="status-badge status-stopped">Stopped</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 24px;">
+      <h2>Settings</h2>
+      <p>Configure your project settings, team members, and integrations.</p>
+      <button class="btn">Open Settings</button>
+    </div>
+  </div>
+
+  <div class="hint">
+    Press <kbd>Cmd+K</kbd> or <kbd>Ctrl+K</kbd> to ask Clicky for help
+  </div>
+
+  <!-- Clicky SDK -->
+  <script src="dist/clicky-sdk.js"></script>
+  <script>
+    // Initialize manually for testing (replace with your actual worker URL and API key)
+    Clicky.default.init({
+      apiKey: 'test-key',
+      workerUrl: 'https://your-worker.workers.dev',
+    });
+
+    console.log('Clicky SDK loaded. Press Cmd+K or Ctrl+K to start.');
+  </script>
+</body>
+</html>
