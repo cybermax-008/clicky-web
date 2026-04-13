@@ -1,152 +1,152 @@
-# Hi, this is Clicky.
-It's an AI teacher that lives as a buddy next to your cursor. It can see your screen, talk to you, and even point at stuff. Kinda like having a real teacher next to you.
+# Clicky SDK
 
-Download it [here](https://www.clicky.so/) for free.
+An embeddable JavaScript SDK that adds step-by-step UI navigation guidance to any web app. Users press **Cmd+K** (or **Ctrl+K**), type what they want to do, and a blue cursor guides them through the interface — pointing at each element to click, waiting for them to click it, then showing the next step.
 
-Here's the [original tweet](https://x.com/FarzaTV/status/2041314633978659092) that kinda blew up for a demo for more context.
+Powered by Claude's vision API. The SDK captures a screenshot of the page, sends it to Claude, and Claude responds with exactly where the user should click next.
 
-![Clicky — an ai buddy that lives on your mac](clicky-demo.gif)
+## How it works
 
-This is the open-source version of Clicky for those that want to hack on it, build their own features, or just see how it works under the hood.
+1. User presses **Cmd/Ctrl+K** → a text input appears
+2. User types: *"How do I create a PostgreSQL service?"*
+3. SDK screenshots the page and sends it to Claude
+4. Claude analyzes the screenshot and responds: *"step 1 of ~4: click on the services tab in the left sidebar"*
+5. The blue cursor flies to the element with a bezier arc animation
+6. User clicks where the cursor points
+7. SDK re-screenshots, sends to Claude, gets the next step
+8. Repeat until done
 
-## Get started with Claude Code
+## Quick start
 
-The fastest way to get this running is with [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
+### 1. Deploy the Cloudflare Worker
 
-Once you get Claude running, paste this:
-
-```
-Hi Claude.
-
-Clone https://github.com/farzaa/clicky.git into my current directory.
-
-Then read the CLAUDE.md. I want to get Clicky running locally on my Mac.
-
-Help me set up everything — the Cloudflare Worker with my own API keys, the proxy URLs, and getting it building in Xcode. Walk me through it.
-```
-
-That's it. It'll clone the repo, read the docs, and walk you through the whole setup. Once you're running you can just keep talking to it — build features, fix bugs, whatever. Go crazy.
-
-## Manual setup
-
-If you want to do it yourself, here's the deal.
-
-### Prerequisites
-
-- macOS 14.2+ (for ScreenCaptureKit)
-- Xcode 15+
-- Node.js 18+ (for the Cloudflare Worker)
-- A [Cloudflare](https://cloudflare.com) account (free tier works)
-- API keys for: [Anthropic](https://console.anthropic.com), [AssemblyAI](https://www.assemblyai.com), [ElevenLabs](https://elevenlabs.io)
-
-### 1. Set up the Cloudflare Worker
-
-The Worker is a tiny proxy that holds your API keys. The app talks to the Worker, the Worker talks to the APIs. This way your keys never ship in the app binary.
+The Worker proxies requests to Claude's API so your keys never ship in the browser.
 
 ```bash
 cd worker
 npm install
-```
-
-Now add your secrets. Wrangler will prompt you to paste each one:
-
-```bash
-npx wrangler secret put ANTHROPIC_API_KEY
-npx wrangler secret put ASSEMBLYAI_API_KEY
-npx wrangler secret put ELEVENLABS_API_KEY
-```
-
-For the ElevenLabs voice ID, open `wrangler.toml` and set it there (it's not sensitive):
-
-```toml
-[vars]
-ELEVENLABS_VOICE_ID = "your-voice-id-here"
-```
-
-Deploy it:
-
-```bash
+npx wrangler secret put ANTHROPIC_API_KEY   # Your Anthropic API key
+npx wrangler secret put SDK_API_KEY          # Any string — used to authenticate SDK requests
 npx wrangler deploy
 ```
 
-It'll give you a URL like `https://your-worker-name.your-subdomain.workers.dev`. Copy that.
+Copy the deployed Worker URL (e.g., `https://your-worker.workers.dev`).
 
-### 2. Run the Worker locally (for development)
+### 2. Add the SDK to your site
 
-If you want to test changes to the Worker without deploying:
+**Script tag:**
+
+```html
+<script
+  src="https://your-cdn.com/clicky-sdk.js"
+  data-api-key="your-sdk-api-key"
+  data-worker-url="https://your-worker.workers.dev">
+</script>
+```
+
+**Or programmatically:**
+
+```js
+import Clicky from '@clicky/sdk';
+
+Clicky.init({
+  apiKey: 'your-sdk-api-key',
+  workerUrl: 'https://your-worker.workers.dev',
+});
+```
+
+### 3. Build the SDK from source
 
 ```bash
-cd worker
-npx wrangler dev
+cd sdk
+npm install
+npm run build
+# Outputs: dist/clicky-sdk.js (IIFE) and dist/clicky-sdk.esm.js (ESM)
 ```
 
-This starts a local server (usually `http://localhost:8787`) that behaves exactly like the deployed Worker. You'll need to create a `.dev.vars` file in the `worker/` directory with your keys:
+## Configuration
 
-```
-ANTHROPIC_API_KEY=sk-ant-...
-ASSEMBLYAI_API_KEY=...
-ELEVENLABS_API_KEY=...
-ELEVENLABS_VOICE_ID=...
-```
-
-Then update the proxy URLs in the Swift code to point to `http://localhost:8787` instead of the deployed Worker URL while developing. Grep for `clicky-proxy` to find them all.
-
-### 3. Update the proxy URLs in the app
-
-The app has the Worker URL hardcoded in a few places. Search for `your-worker-name.your-subdomain.workers.dev` and replace it with your Worker URL:
-
-```bash
-grep -r "clicky-proxy" leanring-buddy/
+```js
+Clicky.init({
+  apiKey: 'your-sdk-api-key',        // Required
+  workerUrl: 'https://...',           // Required — your Worker URL
+  model: 'claude-sonnet-4-6',        // Claude model (default: claude-sonnet-4-6)
+  cursorColor: '#3380FF',             // Cursor color (default: blue)
+  shortcut: 'mod+k',                 // Keyboard shortcut (default: Cmd/Ctrl+K)
+  screenshotMaxDimension: 1280,       // Max screenshot size in px (default: 1280)
+  systemPromptContext: '...',         // Additional context for Claude (e.g., product docs)
+  onStateChange: (state) => {},       // Navigation state change callback
+  onStepComplete: (step) => {},       // Step completion callback
+  onError: (error) => {},             // Error callback
+});
 ```
 
-You'll find it in:
-- `CompanionManager.swift` — Claude chat + ElevenLabs TTS
-- `AssemblyAIStreamingTranscriptionProvider.swift` — AssemblyAI token endpoint
+## API
 
-### 4. Open in Xcode and run
-
-```bash
-open leanring-buddy.xcodeproj
+```js
+Clicky.init(config)                  // Initialize the SDK
+Clicky.destroy()                     // Remove SDK from page
+Clicky.startNavigation('query')      // Start navigation programmatically
+Clicky.cancelNavigation()            // Cancel active navigation
+Clicky.isActive()                    // Check if navigation is in progress
+Clicky.getState()                    // Get current navigation state
 ```
-
-In Xcode:
-1. Select the `leanring-buddy` scheme (yes, the typo is intentional, long story)
-2. Set your signing team under Signing & Capabilities
-3. Hit **Cmd + R** to build and run
-
-The app will appear in your menu bar (not the dock). Click the icon to open the panel, grant the permissions it asks for, and you're good.
-
-### Permissions the app needs
-
-- **Microphone** — for push-to-talk voice capture
-- **Accessibility** — for the global keyboard shortcut (Control + Option)
-- **Screen Recording** — for taking screenshots when you use the hotkey
-- **Screen Content** — for ScreenCaptureKit access
 
 ## Architecture
 
-If you want the full technical breakdown, read `CLAUDE.md`. But here's the short version:
+```
+Browser (your web app)                 Cloudflare Worker
+┌──────────────────────────┐           ┌──────────────────────┐
+│  <script src="sdk.js">   │           │  POST /chat          │
+│                          │  fetch()  │    → forward to Claude│
+│  Cmd+K → text input      │──────────→│    → stream response  │
+│  html2canvas screenshot   │           │                      │
+│  Blue cursor overlay      │  SSE     │                      │
+│  Click detection          │←─────────│                      │
+│  Bezier arc animation     │           └──────────────────────┘
+└──────────────────────────┘
+```
 
-**Menu bar app** (no dock icon) with two `NSPanel` windows — one for the control panel dropdown, one for the full-screen transparent cursor overlay. Push-to-talk streams audio over a websocket to AssemblyAI, sends the transcript + screenshot to Claude via streaming SSE, and plays the response through ElevenLabs TTS. Claude can embed `[POINT:x,y:label:screenN]` tags in its responses to make the cursor fly to specific UI elements across multiple monitors. All three APIs are proxied through a Cloudflare Worker.
+**SDK** (`sdk/`): TypeScript, bundled with esbuild. Uses Shadow DOM to isolate overlay styles from the host page. Screenshots via html2canvas (excludes SDK overlay). ~54KB gzipped.
+
+**Worker** (`worker/`): Cloudflare Worker that proxies requests to Claude's API. Handles CORS, SDK API key auth, and SSE streaming.
 
 ## Project structure
 
 ```
-leanring-buddy/          # Swift source (yes, the typo stays)
-  CompanionManager.swift    # Central state machine
-  CompanionPanelView.swift  # Menu bar panel UI
-  ClaudeAPI.swift           # Claude streaming client
-  ElevenLabsTTSClient.swift # Text-to-speech playback
-  OverlayWindow.swift       # Blue cursor overlay
-  AssemblyAI*.swift         # Real-time transcription
-  BuddyDictation*.swift     # Push-to-talk pipeline
-worker/                  # Cloudflare Worker proxy
-  src/index.ts              # Three routes: /chat, /tts, /transcribe-token
-CLAUDE.md                # Full architecture doc (agents read this)
+sdk/                         # JavaScript SDK
+  src/
+    index.ts                   # Public API + auto-init
+    ClickySDK.ts               # Main orchestrator (navigation loop)
+    ApiClient.ts               # SSE streaming client
+    PointTagParser.ts           # [POINT:x,y:label] regex parser
+    ScreenshotCapture.ts        # html2canvas wrapper
+    CoordinateMapper.ts         # Screenshot → viewport coordinate mapping
+    overlay/                   # Shadow DOM UI components
+    animation/                 # Bezier flight + character streaming
+    events/                    # Keyboard + click listeners
+  test.html                    # Demo page for testing
+worker/                      # Cloudflare Worker proxy
+  src/index.ts                 # Routes: POST /chat
 ```
 
-## Contributing
+## Local development
 
-PRs welcome. If you're using Claude Code, it already knows the codebase — just tell it what you want to build and point it at `CLAUDE.md`.
+```bash
+# Terminal 1: Run the worker locally
+cd worker
+echo "ANTHROPIC_API_KEY=sk-ant-..." > .dev.vars
+echo "SDK_API_KEY=test-key" >> .dev.vars
+npx wrangler dev
 
-Got feedback? DM me on X [@farzatv](https://x.com/farzatv).
+# Terminal 2: Build SDK and serve test page
+cd sdk
+npm run build
+npx serve .
+# Open http://localhost:3000/test.html
+```
+
+Update `test.html` to point `workerUrl` at `http://localhost:8787`.
+
+## License
+
+MIT
